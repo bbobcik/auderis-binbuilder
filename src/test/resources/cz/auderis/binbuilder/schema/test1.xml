@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<content xmlns="http://auderis.cz/ns/binbuilder/1.0">
+
+    00 01 02 03 04 05
+    A0 B1 C2 D3 E4 F5
+    <int> #123 </int>
+
+    <string>This is a string.</string>
+    00
+
+    <group id="x" byte-order="little-endian">
+        12 34 56
+        <string id="str1">text value</string>
+        AB CD EF
+        <long> 0b10110001111 </long>
+    </group>
+    <string id="str2">aaa</string>
+    <string id="str2">aaa</string>
+    <length ref="x" bits="8" />
+    <length ref="aastr3" bits="8" />
+
+
+</content>

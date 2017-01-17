@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ~ Copyright 2016 Boleslav Bobcik - Auderis
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<xs:schema
+        targetNamespace="http://auderis.cz/ns/binbuilder/1.0"
+        xmlns="http://auderis.cz/ns/binbuilder/1.0"
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+>
+
+    <!-- Enumerations -->
+
+    <xs:simpleType name="byteOrderMode" final="restriction">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="big-endian">
+            </xs:enumeration>
+            <xs:enumeration value="little-endian">
+            </xs:enumeration>
+            <xs:enumeration value="platform">
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="wordSize" final="restriction">
+        <xs:restriction base="xs:positiveInteger">
+            <xs:enumeration value="8" />
+            <xs:enumeration value="16" />
+            <xs:enumeration value="32" />
+            <xs:enumeration value="64" />
+        </xs:restriction>
+    </xs:simpleType>
+
+
+    <!-- Data types -->
+
+    <xs:simpleType name="intValue">
+        <xs:restriction base="xs:string">
+            <xs:whiteSpace value="collapse" fixed="true" />
+            <xs:pattern value="[\-+]?((0[xX]|#)[0-9A-Fa-f_]+|0[bB][01_]+|[0-9_]+)"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Attribute groups -->
+
+    <xs:attributeGroup name="endianness">
+        <xs:attribute name="byte-order" type="byteOrderMode" use="optional" />
+    </xs:attributeGroup>
+
+
+    <!-- Element types -->
+
+    <xs:complexType name="contentType">
+        <xs:complexContent mixed="true">
+            <xs:extension base="abstractContentType">
+                <xs:attribute name="byte-order" type="byteOrderMode" default="big-endian" />
+                <xs:attribute name="string-encoding" type="xs:NMTOKEN" default="UTF-8" />
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="abstractContentType" abstract="true" mixed="true">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element ref="include" />
+            <xs:element ref="int" />
+            <xs:element ref="short" />
+            <xs:element ref="long" />
+            <xs:element ref="string" />
+            <xs:element ref="group" />
+            <xs:element ref="length" />
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:complexType name="includeType">
+        <xs:attribute name="src" type="xs:string" use="required" />
+        <xs:attribute name="raw" type="xs:boolean" default="false" />
+    </xs:complexType>
+
+    <xs:complexType name="numericBaseType" abstract="true">
+        <xs:simpleContent>
+            <xs:extension base="intValue">
+                <xs:attribute name="bits" type="wordSize" />
+                <xs:attribute name="byte-order" type="byteOrderMode" />
+                <xs:attribute name="signed" type="xs:boolean" default="true" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="integerType">
+        <xs:simpleContent>
+            <xs:restriction base="numericBaseType">
+                <xs:attribute name="bits" type="wordSize" fixed="32" />
+            </xs:restriction>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="shortType">
+        <xs:simpleContent>
+            <xs:restriction base="numericBaseType">
+                <xs:attribute name="bits" type="wordSize" fixed="16" />
+            </xs:restriction>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="longType">
+        <xs:simpleContent>
+            <xs:restriction base="numericBaseType">
+                <xs:attribute name="bits" type="wordSize" fixed="64" />
+            </xs:restriction>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="stringType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="id" type="xs:NMTOKEN" />
+                <xs:attribute name="encoding" type="xs:NMTOKEN" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="groupType">
+        <xs:complexContent>
+            <xs:extension base="abstractContentType">
+                <xs:attribute name="id" type="xs:NMTOKEN" />
+                <xs:attribute name="byte-order" type="byteOrderMode" />
+                <xs:attribute name="string-encoding" type="xs:NMTOKEN" />
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="lengthType">
+        <xs:attribute name="ref" type="xs:NMTOKEN" use="required" />
+        <xs:attribute name="bits" type="wordSize" default="16" />
+    </xs:complexType>
+
+
+    <!-- Element definitions -->
+
+    <xs:element name="content" type="contentType">
+        <xs:unique name="sequenceId">
+            <xs:selector xpath=".//string" />
+            <xs:field xpath="@id" />
+        </xs:unique>
+        <xs:keyref name="sequenceRef" refer="sequenceId">
+            <xs:selector xpath=".//length" />
+            <xs:field xpath="@ref" />
+        </xs:keyref>
+    </xs:element>
+
+    <xs:element name="include" type="includeType" />
+
+    <xs:element name="int" type="integerType" />
+    <xs:element name="short" type="shortType" />
+    <xs:element name="long" type="longType" />
+    <xs:element name="string" type="stringType" />
+    <!-- TODO <xs:element name="structure" type="structureType" /> -->
+    <!-- TODO <xs:element name="random-bytes" type="randomBytesType" /> -->
+
+    <xs:element name="group" type="groupType" />
+    <!--<xs:element name="block" type="blockType" />-->
+
+    <xs:element name="length" type="lengthType" />
+    <!--<xs:element name="crc" type="crcType" />-->
+    <!-- TODO <xs:element name="digest" type="digestType" /> -->
+
+</xs:schema>
