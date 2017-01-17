@@ -1,0 +1,148 @@
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'cz.auderis:auderis-gradle-tools:1.0.1'
+	}
+}
+
+import cz.auderis.tools.gradle.SemanticVersion
+
+apply plugin: 'java'
+apply plugin: 'groovy'
+apply plugin: 'idea'
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+project.group = 'cz.auderis'
+project.version = SemanticVersion.from("version.txt")
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compile gradleApi()
+	compile localGroovy()
+
+	testCompile('pl.pragmatists:JUnitParams:1.0.5') {
+		exclude group: 'junit'
+	}
+	testCompile('junit:junit:4.12') {
+		exclude group: 'org.hamcrest'
+	}
+	testCompile 'org.hamcrest:hamcrest-all:1.3'
+	testCompile 'cz.auderis:auderis-test-category:1.0.1'
+	testCompile 'cz.auderis:auderis-test-extra:1.2.3'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+	classifier = 'javadoc'
+	from tasks.javadoc.destinationDir
+}
+
+task sourcesJar(type: Jar) {
+	from sourceSets.main.allSource
+	classifier = 'sources'
+}
+
+artifacts {
+	archives jar
+	archives javadocJar
+	archives sourcesJar
+}
+
+
+if (version.stable) {
+	if (!hasProperty("releaseRepository")) {
+		throw new InvalidUserDataException("Property 'releaseRepository' is not defined")
+	}
+	if (!LOCAL_CREDENTIALS.sonatype) {
+		throw new InvalidUserDataException("Sonatype credentials not defined (check LOCAL_CREDENTIALS.sonatype definition)")
+		/**
+		 * Recommended setup for credentials: create file ~/.gradle/init.d/credentials.gradle with the following
+		 * contents:
+		 * <pre>
+		 *   rootProject {
+		 *     ext.LOCAL_CREDENTIALS = [
+		 *       sonatype: [
+		 *         userName: '...',
+		 *         password: '...'
+		 *       ],
+		 *     ]
+		 *   }
+		 * </pre>
+		 */
+	}
+	signing {
+		sign configurations.archives
+	}
+} else {
+	task signArchives << {
+		logger.info("Non-release build, signing not performed")
+	}
+}
+
+uploadArchives {
+	repositories {
+		if (version.stable) {
+			mavenDeployer {
+				beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+				repository(url: releaseRepository) {
+					authentication(userName: LOCAL_CREDENTIALS.sonatype.userName, password: LOCAL_CREDENTIALS.sonatype.password)
+				}
+
+				pom.project {
+					name 'Auderis BinBuilder'
+					description 'Auderis BinBuilder generates binary content declaratively'
+					url 'https://github.com/bbobcik/auderis-binbuilder'
+					inceptionYear 2017
+					packaging 'jar'
+
+					organization {
+						name 'Boleslav Bobcik - Auderis'
+					}
+
+					developers {
+						developer {
+							name 'Boleslav Bobcik'
+							email 'bbobcik@gmail.com'
+							organization 'Auderis'
+							organizationUrl 'https://github.com/bbobcik'
+							timezone 1
+						}
+					}
+
+					licenses {
+						license {
+							name 'The Apache Software License, Version 2.0'
+							url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+						}
+					}
+
+					scm {
+						url 'git@github.com:bbobcik/auderis-binbuilder.git'
+						connection 'scm:git:git@github.com:bbobcik/auderis-binbuilder.git'
+						developerConnection 'scm:git:git@github.com:bbobcik/auderis-binbuilder.git'
+						tag 'HEAD'
+					}
+				}
+			}
+		} else {
+			mavenLocal()
+		}
+	}
+}
+
+uploadArchives.doFirst {
+	if (releaseBuild) {
+		logger.lifecycle("Release build - uploading artifacts to OSS Sonatype Nexus")
+	} else {
+		logger.lifecycle("Non-release build - uploading artifacts to Maven Local")
+	}
+}
