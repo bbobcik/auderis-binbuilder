@@ -14,5 +14,18 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.api.element;
+
+import java.nio.ByteOrder;
+
+public interface NumericElement<T extends NumericElement<T>> extends BuilderElement<T> {
+
+    // getByteOrder() defined in BuilderElement
+    void setByteOrder(ByteOrder endianness);
+    T withByteOrder(ByteOrder endianness);
+
+    NumberRepresentationMode getRepresentation();
+    void setRepresentation(NumberRepresentationMode newMode);
+    T withRepresentation(NumberRepresentationMode newMode);
+
+}

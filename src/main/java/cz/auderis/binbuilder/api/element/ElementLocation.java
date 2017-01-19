@@ -14,5 +14,14 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.api.element;
+
+import java.util.OptionalLong;
+
+public interface ElementLocation {
+
+    OptionalLong getOffset();
+    OptionalLong getSize();
+    OptionalLong getOffsetPlusSize();
+
+}

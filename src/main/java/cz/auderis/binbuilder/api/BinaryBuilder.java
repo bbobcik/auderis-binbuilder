@@ -14,5 +14,20 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.api;
+
+import cz.auderis.binbuilder.api.element.ElementFrame;
+
+import java.util.OptionalLong;
+
+public interface BinaryBuilder<U extends BinaryBuilder<U>> extends AutoCloseable {
+
+    OptionalLong getSize();
+
+    boolean isClosed();
+    @Override void close();
+
+    <T extends ElementFrame<T>> T getRootFrame();
+    <T extends ElementFrame<T>> T getScratchFrame(String name);
+
+}

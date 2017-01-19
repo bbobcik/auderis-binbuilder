@@ -14,5 +14,29 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.impl.element;
+
+import java.nio.ByteOrder;
+
+class ElementContext {
+
+    private final ElementContext parentContext;
+    private ByteOrder order;
+
+    ElementContext(ElementContext parentContext) {
+        this.parentContext = parentContext;
+    }
+
+    ByteOrder getOrder() {
+        if (null != order) {
+            return order;
+        }
+        assert null != parentContext;
+        return parentContext.getOrder();
+    }
+
+    void setOrder(ByteOrder newOrder) {
+        this.order = newOrder;
+    }
+
+}

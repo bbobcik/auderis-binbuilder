@@ -14,5 +14,18 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.api.element;
+
+import java.util.Optional;
+import java.util.concurrent.Future;
+
+public interface ElementRegistry<T extends ElementRegistry<T>> {
+
+    <U extends ElementId<U>> U createId(String name);
+    <U extends ElementId<U>> Optional<U> findByName(String name);
+
+    void registerElement(ElementId<?> id, BuilderElement<?> element);
+    <U extends BuilderElement<U>> Future<U> lookupElement(ElementId<?> id);
+    <U extends BuilderElement<U>> Future<U> lookupByName(String name);
+
+}

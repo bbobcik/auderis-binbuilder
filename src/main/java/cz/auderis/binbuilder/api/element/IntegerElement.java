@@ -14,5 +14,13 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.api.element;
+
+public interface IntegerElement<T extends IntegerElement<T>> extends GeneralIntegerElement<T> {
+
+    void setByteValue(byte value);
+    void setShortValue(short value);
+    void setValue(int value);
+    void setLongValue(long value);
+
+}

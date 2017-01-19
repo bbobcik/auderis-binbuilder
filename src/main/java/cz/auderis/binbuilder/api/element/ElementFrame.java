@@ -14,5 +14,19 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.api.element;
+
+public interface ElementFrame<T extends ElementFrame<T>> extends BuilderElement<T> {
+
+    int getChildrenCount();
+    <U extends BuilderElement<U>> U getFirstElement();
+    <U extends ElementRegistry<U>> U getElementRegistry();
+
+    <U extends RawByteSequence<U>> U addRawBytes();
+    <U extends IntegerElement<U>> U addNumber();
+    <U extends StringElement<U>> U addText();
+    <U extends LengthElement<U>> U addLengthElement();
+    <U extends ElementFrame<U>> U addSubFrame();
+
+
+}

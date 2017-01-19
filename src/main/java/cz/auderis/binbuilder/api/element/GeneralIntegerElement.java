@@ -14,5 +14,24 @@
  * limitations under the License.
  */
 
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://auderis.cz/ns/binbuilder/1.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-package cz.auderis.binbuilder.schema;
+package cz.auderis.binbuilder.api.element;
+
+import java.util.OptionalInt;
+
+public interface GeneralIntegerElement<T extends GeneralIntegerElement<T>> extends NumericElement<T> {
+
+    byte getByteValue();
+    short getShortValue();
+    int getValue();
+    long getLongValue();
+
+    boolean isUnsigned();
+    void setUnsigned(boolean signMode);
+    T asUnsigned();
+    T asSigned();
+
+    OptionalInt getMaxBits();
+    void setMaxBits(OptionalInt newLimit);
+    T withMaxBits(OptionalInt newLimit);
+
+}
