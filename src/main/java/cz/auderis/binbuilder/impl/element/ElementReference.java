@@ -17,30 +17,23 @@
 package cz.auderis.binbuilder.impl.element;
 
 import cz.auderis.binbuilder.api.element.BuilderElement;
-import cz.auderis.binbuilder.api.element.DependentElement;
 import cz.auderis.binbuilder.api.element.ElementId;
 
 import java.util.Optional;
 
-public abstract class AbstractDependentElement<T extends AbstractDependentElement<T>>
-        extends AbstractBuilderElement<T>
-        implements DependentElement<T>
-{
+public class ElementReference {
 
     private final ElementId<?> dependantId;
     private BasicFutureElement<?> futureDependant;
     private BuilderElement<?> dependant;
 
-    protected AbstractDependentElement(AbstractElementFrame<?> parent, ElementContext context, ElementId<?> dependantId) {
-        super(parent, context);
-        this.futureDependant = futureDependant;
+    public ElementReference(ElementId<?> dependantId) {
         if (null == dependantId) {
             throw new NullPointerException();
         }
         this.dependantId = dependantId;
     }
 
-    @Override
     public <U extends ElementId<U>> U getReferenceId() {
         return (U) dependantId;
     }

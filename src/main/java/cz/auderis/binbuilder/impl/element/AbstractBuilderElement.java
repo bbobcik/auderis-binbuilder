@@ -28,13 +28,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 
-public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>> implements BuilderElement<T> {
+public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>>
+        implements BuilderElement<T>
+{
 
-    protected final ElementFrame<?> parent;
+    final static long UNKNOWN_OFFSET = -1L;
+
+    protected final AbstractElementFrame<?> parent;
     protected final ElementContext context;
 
     private AbstractBuilderElement<?> prevElement;
     private AbstractBuilderElement<?> nextElement;
+    private int frameIndex;
     private ElementId<?> id;
     private OptionalLong size;
     private long cachedOffset;
@@ -42,14 +47,17 @@ public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>
     private boolean frozen;
     private List<WeakReference<DependentElement<?>>> dependentElements;
 
-    protected AbstractBuilderElement(ElementFrame<?> parent, ElementContext context) {
+    protected AbstractBuilderElement(AbstractElementFrame<?> parent, ElementContext context) {
         if ((null == parent) || (null == context)) {
             throw new NullPointerException();
+        } else if (frameIndex < 0) {
+            throw new IllegalArgumentException("Invalid frame index: " + frameIndex);
         }
         this.parent = parent;
         this.context = context;
+        this.frameIndex = -1;
         this.size = OptionalLong.empty();
-        this.cachedOffset = -1L;
+        this.cachedOffset = UNKNOWN_OFFSET;
     }
 
     @Override
@@ -64,7 +72,10 @@ public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>
 
     protected void setPreviousElement(AbstractBuilderElement<?> prevElement) {
         assert (null == prevElement) || (parent == prevElement.getParentFrame());
-        this.prevElement = prevElement;
+        if (this.prevElement != prevElement) {
+            this.prevElement = prevElement;
+            this.cachedOffset = UNKNOWN_OFFSET;
+        }
     }
 
     @Override
@@ -75,6 +86,16 @@ public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>
     protected void setNextElement(AbstractBuilderElement<?> nextElement) {
         assert (null == nextElement) || (parent == nextElement.getParentFrame());
         this.nextElement = nextElement;
+    }
+
+    protected int getFrameIndex() {
+        assert frameIndex >= 0;
+        return frameIndex;
+    }
+
+    protected void setFrameIndex(int newIndex) {
+        assert newIndex >= 0;
+        this.frameIndex = newIndex;
     }
 
     @Override
@@ -184,10 +205,11 @@ public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>
         this.cachedOffset = newOffset;
     }
 
-    private OptionalLong computeLocalFrameOffset() {
+    OptionalLong computeLocalFrameOffset() {
         if (cachedOffset >= 0L) {
             return OptionalLong.of(cachedOffset);
         }
+        // Try to find own offset by visiting preceding sibling elements
         long offset = 0L;
         int steps = 0;
         AbstractBuilderElement<?> predecessor = prevElement;
@@ -195,22 +217,24 @@ public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>
             assert predecessor.getParentFrame() == parent;
             final OptionalLong size = predecessor.getSize();
             if (!size.isPresent()) {
-                cachedOffset = -1L;
+                // Offset cannot be calculated
                 return OptionalLong.empty();
             }
             offset += size.getAsLong();
             final long predecessorOffset = predecessor.getCachedOffset();
-            if (predecessorOffset >= 0) {
+            if (predecessorOffset != UNKNOWN_OFFSET) {
                 offset += predecessorOffset;
                 break;
             }
             ++steps;
             predecessor = predecessor.getPreviousElement();
         }
+        // If the offset was determined and the calculation was not trivial (i.e. multiple siblings were visited),
+        // update the offsets in the preceding siblings as well
         if (0 != steps) {
             long prevOffset = offset;
             predecessor = prevElement;
-            while ((null != prevElement) && (prevElement.getCachedOffset() < 0L)) {
+            while ((null != predecessor) && (predecessor.getCachedOffset() == UNKNOWN_OFFSET)) {
                 final OptionalLong size = predecessor.getSize();
                 assert size.isPresent();
                 prevOffset -= size.getAsLong();
@@ -225,11 +249,23 @@ public abstract class AbstractBuilderElement<T extends AbstractBuilderElement<T>
     }
 
     private void recalculateOffsets() {
-//        if (cachedOffset < 0L) {
-//            return;
-//        }
-//        long offset =
-        // TODO
+        if (cachedOffset == UNKNOWN_OFFSET) {
+            return;
+        }
+        long offset = size.isPresent() ? cachedOffset + size.getAsLong() : UNKNOWN_OFFSET;
+        AbstractBuilderElement<?> successor = nextElement;
+        while ((null != successor) && (successor.getCachedOffset() != offset)) {
+            successor.setCachedOffset(offset);
+            if (offset != UNKNOWN_OFFSET) {
+                final OptionalLong successorSize = successor.getSize();
+                if (successorSize.isPresent()) {
+                    offset += successorSize.getAsLong();
+                } else {
+                    offset = UNKNOWN_OFFSET;
+                }
+            }
+            successor = successor.getNextElement();
+        }
     }
 
 }

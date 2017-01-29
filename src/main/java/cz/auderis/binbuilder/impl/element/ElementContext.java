@@ -16,18 +16,23 @@
 
 package cz.auderis.binbuilder.impl.element;
 
-import java.nio.ByteOrder;
+import cz.auderis.binbuilder.api.element.NumberRepresentationMode;
 
-class ElementContext {
+import java.nio.ByteOrder;
+import java.util.EnumMap;
+import java.util.Map;
+
+public class ElementContext {
 
     private final ElementContext parentContext;
     private ByteOrder order;
+    private Map<NumberRepresentationMode, NumberRepresentationEncoder> numberEncoders;
 
-    ElementContext(ElementContext parentContext) {
+    public ElementContext(ElementContext parentContext) {
         this.parentContext = parentContext;
     }
 
-    ByteOrder getOrder() {
+    public ByteOrder getOrder() {
         if (null != order) {
             return order;
         }
@@ -35,8 +40,49 @@ class ElementContext {
         return parentContext.getOrder();
     }
 
-    void setOrder(ByteOrder newOrder) {
+    public void setOrder(ByteOrder newOrder) {
         this.order = newOrder;
+    }
+
+    public NumberRepresentationEncoder getEncoder(NumberRepresentationMode mode) {
+        if (null == mode) {
+            throw new NullPointerException();
+        }
+        final NumberRepresentationEncoder encoder;
+        if (null != numberEncoders) {
+            encoder = numberEncoders.get(mode);
+        } else {
+            encoder = null;
+        }
+        if (null != encoder) {
+            return encoder;
+        }
+        assert null != parentContext;
+        return parentContext.getEncoder(mode);
+    }
+
+    public void setEncoder(NumberRepresentationMode mode, NumberRepresentationEncoder encoder) {
+        if (null == mode) {
+            throw new NullPointerException();
+        } else if (null != encoder) {
+            if (null == numberEncoders) {
+                this.numberEncoders = new EnumMap<>(NumberRepresentationMode.class);
+            }
+            numberEncoders.put(mode, encoder);
+        } else if (null != numberEncoders) {
+            numberEncoders.remove(mode);
+            if (numberEncoders.isEmpty()) {
+                this.numberEncoders = null;
+            }
+        }
+    }
+
+    protected Map<NumberRepresentationMode, NumberRepresentationEncoder> getNumberEncoders() {
+        return numberEncoders;
+    }
+
+    protected void setNumberEncoders(Map<NumberRepresentationMode, NumberRepresentationEncoder> numberEncoders) {
+        this.numberEncoders = numberEncoders;
     }
 
 }

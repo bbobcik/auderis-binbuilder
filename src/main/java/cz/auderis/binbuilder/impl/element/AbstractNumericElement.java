@@ -16,20 +16,21 @@
 
 package cz.auderis.binbuilder.impl.element;
 
-import cz.auderis.binbuilder.api.element.ElementId;
 import cz.auderis.binbuilder.api.element.NumberRepresentationMode;
 import cz.auderis.binbuilder.api.element.NumericElement;
 
 import java.nio.ByteOrder;
 import java.util.OptionalLong;
 
-public abstract class AbstractNumericElement<T extends AbstractNumericElement<T>> extends AbstractNamedByteSubsequence<T> implements NumericElement<T> {
+public abstract class AbstractNumericElement<T extends AbstractNumericElement<T>>
+        extends AbstractBuilderElement<T>
+        implements NumericElement<T>
+{
 
     private NumberRepresentationMode representation;
-    protected boolean unsigned;
 
-    protected AbstractNumericElement(OptionalLong offset, OptionalLong size, ElementId<?> id) {
-        super(offset, size, id);
+    protected AbstractNumericElement(AbstractElementFrame<?> parent, ElementContext context) {
+        super(parent, context);
         this.representation = NumberRepresentationMode.STANDARD;
     }
 
@@ -43,46 +44,23 @@ public abstract class AbstractNumericElement<T extends AbstractNumericElement<T>
         if (null == newMode) {
             throw new NullPointerException();
         }
-        checkStateBeforeUpdate();
+        checkStateBeforeChange();
         if (newMode != representation) {
             this.representation = newMode;
-            updateSize(OptionalLong.empty());
+            numericParametersChanged();
         }
     }
 
     @Override
     public T withRepresentation(NumberRepresentationMode newMode) {
-        return null;
-    }
-
-    @Override
-    public boolean isUnsigned() {
-        return unsigned;
-    }
-
-    @Override
-    public void setUnsigned(boolean signMode) {
-        this.unsigned = signMode;
-    }
-
-    @Override
-    public T asUnsigned() {
-        this.unsigned = true;
-        return (T) this;
-    }
-
-    @Override
-    public T asSigned() {
-        this.unsigned = false;
+        setRepresentation(newMode);
         return (T) this;
     }
 
     @Override
     public void setByteOrder(ByteOrder endianness) {
-        if (null == endianness) {
-            throw new NullPointerException();
-        }
-        this.byteOrder = endianness;
+        checkStateBeforeChange();
+        context.setOrder(endianness);
     }
 
     @Override
@@ -91,11 +69,8 @@ public abstract class AbstractNumericElement<T extends AbstractNumericElement<T>
         return (T) this;
     }
 
-    @Override
-    public int getWordSize() {
-        final int byteSize = (int) size.getAsLong();
-        assert byteSize > 0;
-        return byteSize * Byte.SIZE;
+    protected void numericParametersChanged() {
+        setSize(OptionalLong.empty());
     }
 
 }

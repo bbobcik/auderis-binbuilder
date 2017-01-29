@@ -16,40 +16,33 @@
 
 package cz.auderis.binbuilder.impl.element;
 
-import cz.auderis.binbuilder.api.element.ElementFrame;
 import cz.auderis.binbuilder.api.element.StringElement;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
+import java.util.OptionalLong;
 
-public abstract class AbstractStringElement<T extends AbstractStringElement<T>> extends AbstractBuilderElement<T> implements StringElement<T> {
+public abstract class AbstractStringElement<T extends AbstractStringElement<T>>
+        extends AbstractBuilderElement<T>
+        implements StringElement<T>
+{
 
-    protected Charset charset;
-    protected CharsetEncoder encoder;
-    protected boolean dataPrepared;
+    private static ThreadLocal<CharsetEncoder> SHARED_ASCII_ENCODER = ThreadLocal.withInitial(() -> StandardCharsets.US_ASCII.newEncoder());
+    private static ThreadLocal<CharsetEncoder> SHARED_UTF8_ENCODER = ThreadLocal.withInitial(() -> StandardCharsets.UTF_8.newEncoder());
+    private static ThreadLocal<ByteBuffer> SCRATCH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(4096));
 
-    protected AbstractStringElement(ElementFrame<?> parent, ElementContext context) {
+    private Charset charset;
+    private CharsetEncoder encoder;
+
+    protected AbstractStringElement(AbstractElementFrame<?> parent, ElementContext context) {
         super(parent, context);
         this.charset = StandardCharsets.UTF_8;
     }
 
-//    @Override
-//    public T appendChar(char c) {
-//        checkStateBeforeChange();
-//        storeChar(c);
-//        return (T) this;
-//    }
-//
-//    @Override
-//    public T appendText(CharSequence text) {
-//        checkStateBeforeChange();
-//        if ((null != text) && (0 != text.length())) {
-//            storeText(text);
-//        }
-//        return (T) this;
-//    }
-//
     @Override
     public Charset getCharset() {
         assert (null == encoder) != (null == charset);
@@ -61,8 +54,12 @@ public abstract class AbstractStringElement<T extends AbstractStringElement<T>> 
         if (null == newCharset) {
             throw new NullPointerException();
         }
-        this.charset = newCharset;
-        this.encoder = null;
+        checkStateBeforeChange();
+        if (!newCharset.equals(charset)) {
+            this.charset = newCharset;
+            this.encoder = null;
+            stringParametersChanged();
+        }
     }
 
     @Override
@@ -78,12 +75,15 @@ public abstract class AbstractStringElement<T extends AbstractStringElement<T>> 
 
     @Override
     public void setEncoder(CharsetEncoder newEncoder) {
+        checkStateBeforeChange();
         if (null != newEncoder) {
             this.encoder = newEncoder;
             this.charset = null;
+            stringParametersChanged();
         } else if (null != encoder) {
             this.charset = encoder.charset();
             this.encoder = null;
+            stringParametersChanged();
         }
     }
 
@@ -93,34 +93,45 @@ public abstract class AbstractStringElement<T extends AbstractStringElement<T>> 
         return (T) this;
     }
 
-    @Override
-    protected boolean prepareForClose() {
-        if (dataPrepared) {
-            return true;
-        } else if (!super.prepareForClose()) {
-            return false;
-        }
-        // Prepare encoder
-        if (null == encoder ) {
-            assert null != charset;
-            encoder = charset.newEncoder();
+    protected void stringParametersChanged() {
+        setSize(OptionalLong.empty());
+    }
+
+    protected CharsetEncoder getEncoderInstance() {
+        final CharsetEncoder result;
+        if (null != encoder) {
+            result = encoder;
         } else {
-            encoder.reset();
+            assert null != charset;
+            if (StandardCharsets.UTF_8.equals(charset)) {
+                result = SHARED_UTF8_ENCODER.get();
+            } else if (StandardCharsets.US_ASCII.equals(charset)) {
+                result = SHARED_ASCII_ENCODER.get();
+            } else {
+                result = charset.newEncoder();
+            }
         }
-        dataPrepared = prepareOutputData();
-        return dataPrepared;
+        result.reset();
+        return result;
     }
 
-    @Override
-    protected void fixLocation() {
-        // Size must be calculated during prepareOutputData();
-        assert size.isPresent();
+    protected int computeByteLength(CharBuffer data) {
+        if (!data.hasRemaining()) {
+            return 0;
+        }
+        final CharsetEncoder enc = getEncoderInstance();
+        final ByteBuffer scratchBuffer = SCRATCH_BUFFER.get();
+        int totalLength = 0;
+        CoderResult result;
+        do {
+            scratchBuffer.clear();
+            result = enc.encode(data, scratchBuffer, true);
+            totalLength += scratchBuffer.flip().remaining();
+        } while (result.isOverflow());
+        scratchBuffer.clear();
+        enc.flush(scratchBuffer);
+        totalLength += scratchBuffer.flip().remaining();
+        return totalLength;
     }
-
-    protected abstract void storeChar(char c);
-
-    protected abstract void storeText(CharSequence text);
-
-    protected abstract boolean prepareOutputData();
 
 }

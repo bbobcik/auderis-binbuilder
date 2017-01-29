@@ -32,72 +32,68 @@
 
 package cz.auderis.binbuilder.impl.element;
 
-import cz.auderis.binbuilder.api.element.LengthElement;
+import cz.auderis.binbuilder.api.element.BuilderElement;
 import cz.auderis.binbuilder.api.element.ElementId;
+import cz.auderis.binbuilder.api.element.LengthElement;
 
 import java.util.Optional;
 import java.util.OptionalLong;
 
-public class BasicLengthElement extends AbstractNumericElement<BasicLengthElement> implements LengthElement<BasicLengthElement> {
+public class BasicLengthElement
+        extends AbstractGeneralIntegerElement<BasicLengthElement>
+        implements LengthElement<BasicLengthElement>
+{
 
-    protected NamedSubsequenceReference reference;
+    private final ElementReference reference;
 
-    protected BasicLengthElement(NamedSubsequenceReference ref, long size) {
-        this(ref, OptionalLong.empty(), size, Optional.empty());
-    }
-
-    protected BasicLengthElement(NamedSubsequenceReference ref, OptionalLong offset, long size) {
-        this(ref, offset.empty(), size, Optional.empty());
-    }
-
-    protected BasicLengthElement(NamedSubsequenceReference ref, OptionalLong offset, long size, Optional<ElementId> id) {
-        super(offset, size, id);
-        this.reference = ref;
+    protected BasicLengthElement(AbstractElementFrame<?> parent, ElementContext context, ElementId<?> dependantId) {
+        super(parent, context);
+        this.reference = new ElementReference(dependantId);
     }
 
     @Override
-    public Optional<NamedSubsequenceReference> getSourceReference() {
-        return Optional.ofNullable(reference);
-    }
-
-    @Override
-    public void setSourceReference(Optional<NamedSubsequenceReference> ref) {
-        this.reference = ref.orElse(null);
-    }
-
-    @Override
-    public BasicLengthElement withSourceReference(Optional<NamedSubsequenceReference> ref) {
-        setSourceReference(ref);
-        return this;
+    public <U extends ElementId<U>> U getReferenceId() {
+        return reference.getReferenceId();
     }
 
     @Override
     public boolean isSourceLocationFixed() {
-        if (null == reference) {
+        final Optional<BuilderElement<?>> dependant = (Optional<BuilderElement<?>>) reference.getDependant();
+        if (!dependant.isPresent()) {
             return false;
         }
-        final Optional<NamedByteSubsequence> optSubsequence = reference.getSubsequence();
-        if (!optSubsequence.isPresent()) {
-            return false;
-        }
-        return optSubsequence.get().isOutputLocationFixed();
+        final OptionalLong dependantSize = dependant.get().getSize();
+        return dependantSize.isPresent();
     }
 
     @Override
     public OptionalLong getSourceLength() {
-        if (null == reference) {
+        final Optional<BuilderElement<?>> dependant = (Optional<BuilderElement<?>>) reference.getDependant();
+        if (!dependant.isPresent()) {
             return OptionalLong.empty();
         }
-        final Optional<NamedByteSubsequence> optSubsequence = reference.getSubsequence();
-        if (!optSubsequence.isPresent()) {
-            return OptionalLong.empty();
-        }
-        return optSubsequence.get().getSize();
+        final OptionalLong dependantSize = dependant.get().getSize();
+        return dependantSize;
     }
 
     @Override
-    protected boolean prepareForClose() {
-        return isSourceLocationFixed();
+    public byte getByteValue() {
+        return (byte) getSourceLength().orElse(-1L);
+    }
+
+    @Override
+    public short getShortValue() {
+        return (short) getSourceLength().orElse(-1L);
+    }
+
+    @Override
+    public int getValue() {
+        return (int) getSourceLength().orElse(-1L);
+    }
+
+    @Override
+    public long getLongValue() {
+        return getSourceLength().orElse(-1L);
     }
 
 }

@@ -14,24 +14,14 @@
  * limitations under the License.
  */
 
-package cz.auderis.binbuilder.api.element;
+package cz.auderis.binbuilder.impl.element;
 
-import java.util.OptionalInt;
+import java.math.BigDecimal;
 
-public interface GeneralIntegerElement<T extends GeneralIntegerElement<T>> extends NumericElement<T> {
+public interface NumberRepresentationEncoder {
 
-    byte getByteValue();
-    short getShortValue();
-    int getValue();
-    long getLongValue();
+    int getIntegerByteCount(long value, int neededRawBits, boolean unsigned);
 
-    boolean isUnsigned();
-    void setUnsigned(boolean unsignedNumber);
-    T asUnsigned();
-    T asSigned();
-
-    OptionalInt getMaxBits();
-    void setMaxBits(OptionalInt newLimit);
-    T withMaxBits(OptionalInt newLimit);
+    int getDecimalByteCount(BigDecimal value);
 
 }
